@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AirQualityRanking;
+use App\Services\Pm25Level;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Illuminate\View\View;
 
 class AirQualityController extends Controller
 {
-    public function index(Request $request, AirQualityRanking $ranking): View
+    public function index(Request $request, AirQualityRanking $ranking, Pm25Level $pm25Level): View
     {
         $results = null;
         $startDate = $request->query('start_date');
@@ -19,7 +20,7 @@ class AirQualityController extends Controller
 
         if ($startDate !== null || $endDate !== null) {
             $period = $request->validate($this->periodRules());
-            $results = $ranking->forPeriod($period['start_date'], $period['end_date']);
+            $results = $ranking->forPeriod($period['start_date'], $period['end_date'], $pm25Level);
         }
 
         return view('air-quality.index', [
@@ -31,10 +32,10 @@ class AirQualityController extends Controller
         ]);
     }
 
-    public function api(Request $request, AirQualityRanking $ranking): JsonResponse
+    public function api(Request $request, AirQualityRanking $ranking, Pm25Level $pm25Level): JsonResponse
     {
         $period = $request->validate($this->periodRules());
-        $results = $ranking->forPeriod($period['start_date'], $period['end_date']);
+        $results = $ranking->forPeriod($period['start_date'], $period['end_date'], $pm25Level);
         $available = array_values(array_filter($results, fn (array $city): bool => $city['average_pm2_5'] !== null));
 
         return response()->json([

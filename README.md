@@ -30,6 +30,21 @@ One API grid point at each city coordinate is used as a consistent proxy for tha
 
 Each collection downloads the rolling six-month window in one multi-location request, validates every location and hourly array before writing, and upserts observations transactionally. Timestamps are requested as Unix time and stored in UTC so the repeated local hour at daylight-saving transitions remains distinct; date-range queries convert Sofia-local day boundaries to UTC. A malformed or failed response leaves existing measurements intact. Null PM2.5 values and future hours are skipped. Successful collection prunes records older than six months. The scheduler runs the collector daily at 03:15 Sofia time.
 
+## PM2.5 color guide
+
+The selected-range average is colored using the following U.S. EPA PM2.5 concentration bands:
+
+| Color | Category | Selected-range average |
+| --- | --- | ---: |
+| Green | Good | 0–9.0 μg/m³ |
+| Yellow | Moderate | >9.0–35.4 μg/m³ |
+| Orange | Unhealthy for sensitive groups | >35.4–55.4 μg/m³ |
+| Red | Unhealthy | >55.4–125.4 μg/m³ |
+| Purple | Very unhealthy | >125.4–225.4 μg/m³ |
+| Maroon | Hazardous | >225.4 μg/m³ |
+
+These breakpoints correspond to the EPA's PM2.5 concentration categories for the U.S. Air Quality Index ([AQI basics](https://www.airnow.gov/aqi/aqi-basics/)). They provide a familiar visual reference, not a claim that the app calculates an official AQI. Official particle-pollution AQI uses a 24-hour concentration (or an approved NowCast); averaging hourly values over a user-selected period is a different statistic. In particular, don't interpret a multi-day average or its color as a real-time health warning.
+
 ## Query, health, and metrics
 
 - `GET /` — date-picker UI.
