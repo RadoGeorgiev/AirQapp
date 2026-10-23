@@ -30,16 +30,35 @@
         .notice { background: #eef7f1; color: #486459; }
         h2 { margin: 35px 0 5px; font-size: 1.55rem; letter-spacing: -.025em; }
         .subheading { color: #6b7d77; }
-        .winner { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 20px; padding: 22px 24px; border-radius: 14px; background: #e2f3e9; }
-        .winner-label { color: #376b57; font-size: .79rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+        .quality-guide { margin-top: 25px; padding-top: 20px; border-top: 1px solid #e9efea; }
+        .quality-guide h2 { margin: 0; font-size: 1.12rem; }
+        .guide-note { margin: 7px 0 14px; color: #6b7d77; font-size: .84rem; line-height: 1.5; }
+        .guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+        .guide-item { display: grid; grid-template-columns: 12px minmax(0, 1fr); align-items: start; gap: 10px; padding: 11px; border: 1px solid #e9efea; border-radius: 10px; }
+        .guide-swatch, .level-dot { width: 11px; height: 11px; flex: 0 0 11px; border-radius: 50%; background: currentColor; }
+        .guide-item strong { display: block; font-size: .82rem; }
+        .guide-item small { display: block; margin-top: 2px; color: inherit; opacity: .8; font-size: .75rem; }
+        .guide-range { display: block; margin-top: 5px; font-size: .74rem; font-weight: 700; }
+        .level-good { background: #e1f5e9; color: #17683b; }
+        .level-moderate { background: #fff3c4; color: #795600; }
+        .level-sensitive { background: #ffead7; color: #914512; }
+        .level-unhealthy { background: #ffe0dd; color: #a32d27; }
+        .level-very-unhealthy { background: #eee2ff; color: #6530a0; }
+        .level-hazardous { background: #4b102d; color: #fff; }
+        .winner { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 20px; padding: 22px 24px; border: 1px solid currentColor; border-radius: 14px; }
+        .winner-label { opacity: .8; font-size: .79rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
         .winner-name { margin-top: 5px; font-size: 1.7rem; font-weight: 750; }
         .winner-value { text-align: right; font-size: 1.8rem; font-weight: 750; white-space: nowrap; }
-        .winner-value small { display: block; color: #55756a; font-size: .76rem; font-weight: 550; }
+        .winner-value small { display: block; color: inherit; font-size: .76rem; font-weight: 550; }
+        .level-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 9px; border-radius: 999px; font-size: .82rem; font-weight: 750; white-space: nowrap; }
+        .level-pill .level-dot { width: 8px; height: 8px; flex-basis: 8px; }
+        .level-hazardous .level-pill { background: #fff; color: #4b102d; }
         table { width: 100%; margin-top: 18px; border-collapse: collapse; text-align: left; }
         th, td { padding: 14px 12px; border-bottom: 1px solid #e9efea; }
         th { color: #71817b; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; }
         td:last-child, th:last-child { text-align: right; }
-        tbody tr:first-child td { color: #195d47; font-weight: 700; }
+        .winner-row td { font-weight: 700; }
+        .winner-row td:nth-child(2) { color: #195d47; }
         .rank { color: #85948d; }
         footer { margin-top: 36px; color: #75847e; font-size: .81rem; line-height: 1.7; }
         a { color: #26735b; }
@@ -50,8 +69,12 @@
             button { grid-column: 1 / -1; }
             .winner { align-items: flex-start; flex-direction: column; }
             .winner-value { text-align: left; }
+            .guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             th, td { padding: 12px 7px; font-size: .9rem; }
+            .level-pill { align-items: flex-start; flex-direction: column; gap: 3px; border-radius: 9px; white-space: normal; }
+            .level-pill .level-dot { display: none; }
         }
+        @media (max-width: 390px) { .guide-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -85,20 +108,39 @@
             </div>
         @endif
 
+        <section class="quality-guide" aria-labelledby="quality-guide-heading">
+            <h2 id="quality-guide-heading">How to read the PM2.5 colors</h2>
+            <p class="guide-note">
+                Bands are based on U.S. EPA PM2.5 AQI concentration breakpoints. We apply them to the selected-period average for context; this is not an official AQI reading or health assessment.
+            </p>
+            <div class="guide-grid">
+                @foreach (config('air-quality.pm2_5_levels') as $key => $level)
+                    <div class="guide-item level-{{ $key }}">
+                        <span class="guide-swatch" aria-hidden="true"></span>
+                        <span>
+                            <strong>{{ $level['label'] }}</strong>
+                            <small>{{ $level['description'] }}</small>
+                            <span class="guide-range">{{ $level['range'] }}</span>
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
         @if ($results !== null)
             @php($winner = collect($results)->first(fn (array $city) => $city['average_pm2_5'] !== null))
             <h2>City ranking</h2>
             <p class="subheading">{{ $startDate }} to {{ $endDate }} · average PM2.5 for the selected hours</p>
 
             @if ($winner)
-                <div class="winner">
+                <div class="winner level-{{ $winner['air_quality']['key'] }}">
                     <div>
                         <div class="winner-label">Cleanest city for this period</div>
                         <div class="winner-name">{{ $winner['name'] }}</div>
                     </div>
                     <div class="winner-value">
                         {{ number_format($winner['average_pm2_5'], 2) }}
-                        <small>μg/m³ average PM2.5</small>
+                        <small>μg/m³ average PM2.5 · {{ $winner['air_quality']['label'] }}</small>
                     </div>
                 </div>
             @else
@@ -116,10 +158,19 @@
                 </thead>
                 <tbody>
                 @foreach ($results as $city)
-                    <tr>
+                    <tr @class(['winner-row' => $city['rank'] === 1])>
                         <td class="rank">{{ $city['rank'] ?? '—' }}</td>
                         <td>{{ $city['name'] }}</td>
-                        <td>{{ $city['average_pm2_5'] === null ? 'No data' : number_format($city['average_pm2_5'], 2).' μg/m³' }}</td>
+                        <td>
+                            @if ($city['average_pm2_5'] === null)
+                                No data
+                            @else
+                                <span class="level-pill level-{{ $city['air_quality']['key'] }}">
+                                    <span class="level-dot" aria-hidden="true"></span>
+                                    {{ number_format($city['average_pm2_5'], 2) }} μg/m³ · {{ $city['air_quality']['label'] }}
+                                </span>
+                            @endif
+                        </td>
                         <td>{{ number_format($city['measurement_count']) }}</td>
                     </tr>
                 @endforeach

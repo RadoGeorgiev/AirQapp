@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AirQualityMeasurement;
 use App\Models\AirQualitySync;
 use App\Services\AirQualityCollector;
+use App\Services\Pm25Level;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -174,7 +175,10 @@ class AirQualityTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('cleanest_city.name', 'Plovdiv')
             ->assertJsonPath('cleanest_city.average_pm2_5', 5)
+            ->assertJsonPath('cleanest_city.air_quality.key', 'good')
+            ->assertJsonPath('cleanest_city.air_quality.label', 'Good')
             ->assertJsonPath('ranking.0.rank', 1)
+            ->assertJsonPath('ranking.0.air_quality.key', 'good')
             ->assertJsonPath('ranking.4.name', 'Burgas')
             ->assertJsonPath('unit', 'μg/m³');
 
@@ -193,7 +197,34 @@ class AirQualityTest extends TestCase
             ->assertOk()
             ->assertSee('Cleanest city for this period')
             ->assertSee('Plovdiv')
-            ->assertSee('5.00 μg/m³');
+            ->assertSee('5.00 μg/m³')
+            ->assertSee('How to read the PM2.5 colors')
+            ->assertSee('level-good', false)
+            ->assertSee('level-hazardous', false)
+            ->assertSee('not an official AQI reading');
+    }
+
+    public function test_pm25_colors_follow_the_documented_concentration_boundaries(): void
+    {
+        $levels = app(Pm25Level::class);
+
+        foreach ([
+            [0, 'good'],
+            [9, 'good'],
+            [9.01, 'moderate'],
+            [35.4, 'moderate'],
+            [35.41, 'sensitive'],
+            [55.4, 'sensitive'],
+            [55.41, 'unhealthy'],
+            [125.4, 'unhealthy'],
+            [125.41, 'very-unhealthy'],
+            [225.4, 'very-unhealthy'],
+            [225.41, 'hazardous'],
+        ] as [$value, $expected]) {
+            $this->assertSame($expected, $levels->forValue((float) $value)['key']);
+        }
+
+        $this->assertNull($levels->forValue(null));
     }
 
     public function test_invalid_date_ranges_return_clear_validation_errors(): void

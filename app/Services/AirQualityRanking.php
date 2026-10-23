@@ -10,7 +10,7 @@ class AirQualityRanking
     /**
      * @return list<array{name: string, average_pm2_5: ?float, measurement_count: int, rank: ?int}>
      */
-    public function forPeriod(string $startDate, string $endDate): array
+    public function forPeriod(string $startDate, string $endDate, Pm25Level $pm25Level): array
     {
         $timezone = config('air-quality.timezone');
         $start = CarbonImmutable::parse($startDate, $timezone)->startOfDay()->utc();
@@ -24,12 +24,14 @@ class AirQualityRanking
             ->keyBy('city');
 
         $ranking = collect(config('air-quality.cities'))
-            ->map(function (array $city, string $slug) use ($averages): array {
+            ->map(function (array $city, string $slug) use ($averages, $pm25Level): array {
                 $average = $averages->get($slug);
+                $averagePm25 = $average === null ? null : round((float) $average->average_pm2_5, 2);
 
                 return [
                     'name' => $city['name'],
-                    'average_pm2_5' => $average === null ? null : round((float) $average->average_pm2_5, 2),
+                    'average_pm2_5' => $averagePm25,
+                    'air_quality' => $pm25Level->forValue($averagePm25),
                     'measurement_count' => $average === null ? 0 : (int) $average->measurement_count,
                     'rank' => null,
                 ];
